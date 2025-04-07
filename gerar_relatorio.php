@@ -1,19 +1,14 @@
 <?php
-
-//Estou utilizando essa biblioteca https://mpdf.github.io/
-
+// Configurações e includes
 include './config/config.php';
-// Caminho ABSOLUTO para o autoload (ou seja: Exatamente o caminho que está o arquivo autoload.php instalado via composer)
-require_once 'C:/xampp/htdocs/projetoETC_V02/vendor/autoload.php';
+include __DIR__ . '/vendor/autoload.php';
 
 session_start();
-
-//Vamos aqui setar o horário correto que pretendemos usar, assim como fizemos no nosso primeiro exemplo de aula
 date_default_timezone_set('America/Sao_Paulo'); 
 
 // Verificação de classe MPDF
 if (!class_exists('\\Mpdf\\Mpdf')) {
-    die("Erro: Bibliotecas do mPDF não carregadas!");
+    die("Erro: Bibliotecas do mPDF não carregadas! Verifique o caminho do autoload.php");
 }
 
 // Verifica autenticação
@@ -30,17 +25,24 @@ if (!in_array($tipo, $tipos_permitidos)) {
     die('Tipo de relatório inválido!');
 }
 
-// Configuração do mPDF
-$mpdf = new \Mpdf\Mpdf([
-    'mode' => 'utf-8',
-    'format' => 'A4',
-    'margin_top' => 25,
-    'tempDir' => __DIR__ . '/tmp'
-]);
+// Cria diretório temporário se não existir
+if (!is_dir(__DIR__ . '/tmp')) {
+    if (!mkdir(__DIR__ . '/tmp', 0777, true)) {
+        die('Não foi possível criar diretório temporário');
+    }
+}
 
-// Aqui é a consulta que será feita no banco e será jogada para o PDF
+// Configuração do mPDF
 try {
-    global $pdo; // Certifique-se que $pdo está disponível
+    $mpdf = new \Mpdf\Mpdf([
+        'mode' => 'utf-8',
+        'format' => 'A4',
+        'margin_top' => 25,
+        'tempDir' => __DIR__ . '/tmp',
+        'default_font' => 'arial' // Adicionando fonte padrão
+    ]);
+
+    global $pdo;
     
     switch ($tipo) {
         case 'usuarios':
@@ -67,51 +69,56 @@ try {
     $stmt = $pdo->query($sql);
     $dados = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-    /**Formatação de como queremos nosso relatório
-     * nesse caso utilizamos html para fazer a formatação.
-     * lembrando que cada um pode configurar do jeito que quiser a saída do relatório OK?
-    */
-    
+    if (empty($dados)) {
+        die('Nenhum dado encontrado para gerar o relatório');
+    }
+
     $html = '
     <style>
         .header { text-align: center; margin-bottom: 20px; border-bottom: 2px solid #0066cc; padding-bottom: 15px; }
-        .logo {width: 150px; margin-bottom: 10px;}
-        table { width: 100%; border-collapse: collapse; }
-        th { background-color: #0066cc; color: white; padding: 10px; }
+        .logo { width: 150px; margin-bottom: 10px; }
+        table { width: 100%; border-collapse: collapse; margin-top: 20px; font-size: 12px; }
+        th { background-color: #0066cc; color: white; padding: 10px; text-align: left; }
         td { padding: 8px; border: 1px solid #ddd; }
-        .header { text-align: center; margin-bottom: 20px; }
+        .titulo { color: #0066cc; margin-bottom: 5px; }
+        .info-geracao { color: #666; margin-top: 10px; }
     </style>
     
-        <div class="header">
-            <img src="'.__DIR__.'./assets/img/logo.png" class="logo">
-            <h1 class="titulo">Relatório de '.ucfirst($tipo).'</h1>
-            <div class="info-geracao">
-                <small>Gerado em: '.date('d/m/Y H:i:s').'</small><br>
-                <small>Por: '.$_SESSION['usuario']['nome'].'</small>
-            </div>
+    <div class="header">
+        <img src="'.__DIR__.'/assets/img/logo.png" class="logo">
+        <h1 class="titulo">Relatório de '.ucfirst($tipo).'</h1>
+        <div class="info-geracao">
+            <small>Gerado em: '.date('d/m/Y H:i:s').'</small><br>
+            <small>Por: '.htmlspecialchars($_SESSION['usuario']['nome']).'</small>
         </div>
+    </div>
     
     <table>
-        <tr>';
+        <thead>
+            <tr>';
     
-    foreach ($dados[0] as $chave => $valor) {
+    foreach (array_keys($dados[0]) as $chave) {
         $html .= '<th>'.ucwords(str_replace('_', ' ', $chave)).'</th>';
     }
-    $html .= '</tr>';
+    $html .= '</tr>
+        </thead>
+        <tbody>';
     
     foreach ($dados as $linha) {
         $html .= '<tr>';
         foreach ($linha as $valor) {
-            $html .= '<td>'.$valor.'</td>';
+            $html .= '<td>'.htmlspecialchars($valor).'</td>';
         }
         $html .= '</tr>';
     }
     
-    $html .= '</table>';
+    $html .= '</tbody></table>';
     
     $mpdf->WriteHTML($html);
-    $mpdf->Output();
-
+    
+    // Força download com nome personalizado
+    $mpdf->Output('Relatorio_'.$tipo.'_'.date('Ymd').'.pdf', 'D');
+    
 } catch (Exception $e) {
-    die("Erro: ".$e->getMessage());
+    die("Erro ao gerar PDF: ".$e->getMessage());
 }
