@@ -1,0 +1,95 @@
+/* Corrige o posicionamento do header */
+body:not(.sidebar-collapse) .main-header {
+    margin-left: 250px;
+    width: calc(100% - 250px);
+}
+
+/* Mantém o header fixo no topo */
+.main-header {
+    position: fixed;
+    top: 0;
+    right: 0;
+    left: 0;
+    z-index: 1030;
+}
+
+/* Ajuste do conteúdo principal */
+.content-wrapper {
+    margin-top: 56px; /* Altura do header */
+    margin-left: 250px;
+    min-height: calc(100vh - 56px);
+}
+
+/* Quando o sidebar está recolhido */
+.sidebar-collapse .content-wrapper {
+    margin-left: 0;
+}
+
+.nav-treeview {
+    padding-left: 25px;
+}
+
+.nav-treeview .nav-link {
+    padding: 0.5rem 1rem;
+}
+
+.nav-treeview .nav-item {
+    margin: 2px 0;
+}
+
+.nav-treeview .nav-link:hover {
+    background-color: rgba(255,255,255,0.1);
+}
+
+.nav-sidebar .menu-open > .nav-treeview {
+    display: block;
+}
+
+/* Animação suave */
+.nav-treeview {
+    transition: all 0.3s ease-in-out;
+}
+
+/* Estilo para a seta quando o menu está aberto */
+.menu-open .fa-angle-left {
+    transform: rotate(-90deg);
+    transition: transform 0.3s ease;
+}
+
+/* Responsividade do Sidebar */
+@media (max-width: 767.98px) {
+    .main-sidebar {
+        transform: translateX(-100%);
+        position: fixed;
+        z-index: 1038;
+        height: 100vh;
+        transition: transform 0.3s ease-in-out;
+    }
+    
+    .sidebar-open .main-sidebar {
+        transform: translateX(0);
+    }
+    
+    .sidebar-overlay {
+        display: none;
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background-color: rgba(0,0,0,0.5);
+        z-index: 1037;
+    }
+    
+    .sidebar-open .sidebar-overlay {
+        display: block;
+    }
+    
+    .content-wrapper, .main-header {
+        margin-left: 0 !important;
+    }
+    
+    .brand-link {
+        padding: 10px !important;
+    }
+}
